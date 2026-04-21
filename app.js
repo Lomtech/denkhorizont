@@ -1,14 +1,16 @@
 /* ==========================================================================
-   Denkhorizonte V2 – app.js
-   Alle API-Calls gehen über /.netlify/functions/claude.
-   V2: radiale Feldlabels, persistenter Inspector, Click-to-Pin, Ring- &
-   Quadranten-Filter, gestaffelte Reveal-Animation, Grid-Analyse-Layout.
+   Denkhorizonte V3 – app.js
+   3-column resizable workspace with collapsible input, full localStorage
+   persistence of decision/questions/answers/analysis/layout.
    ========================================================================== */
 
 const NS = 'http://www.w3.org/2000/svg';
+const STORAGE_KEY = 'denkhorizonte.v1';
 
 
-/* ----- 1. Static data -------------------------------------------------- */
+/* ============================================================= */
+/* ===== 1. Static data ======================================= */
+/* ============================================================= */
 
 const RINGS = [
   { id: 'rot', label: 'Rot', keyword: 'Macht', ro: 115, ri: 42, col: '#C0392B' },
@@ -114,7 +116,41 @@ const FIELDS = [
 const RING_IDS = ['rot', 'blau', 'orange', 'gruen', 'gelb'];
 
 
-/* ----- 2. Geometry ----------------------------------------------------- */
+/* ============================================================= */
+/* ===== 2. State management & persistence =================== */
+/* ============================================================= */
+
+/** Persistent state shape:
+ *  { decision, questions, answers, analysis, step, colInput, colResults, inputCollapsed }
+ */
+
+function loadState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch (e) {
+    console.warn('State load failed:', e);
+    return {};
+  }
+}
+
+function saveState(patch) {
+  try {
+    const current = loadState();
+    const next = { ...current, ...patch };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch (e) {
+    console.warn('State save failed:', e);
+  }
+}
+
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+}
+
+
+/* ============================================================= */
+/* ===== 3. Geometry ========================================== */
+/* ============================================================= */
 
 const CX = 450, CY = 450;
 
@@ -137,14 +173,18 @@ function arcPath(r, a1, a2, sweep = 1) {
 }
 
 
-/* ----- 3. Build map ---------------------------------------------------- */
+/* ============================================================= */
+/* ===== 4. Build SVG map ===================================== */
+/* ============================================================= */
 
-const fieldState = {}; // id -> element refs
+const fieldState = {};
 let pinnedFieldId = null;
 let inspectorFieldId = null;
-let ringFilter = null;   // 'rot' | 'blau' | ... | null
-let quadFilter = null;   // 'ii' | 'ai' | 'wi' | 'wa' | null
+let ringFilter = null;
+let quadFilter = null;
 let lastAnalysis = null;
+let decisionText = '';
+let lastQuestions = null;
 
 function build() {
   const byQ = { ii: [], ai: [], wi: [], wa: [] };
@@ -156,7 +196,7 @@ function build() {
   const spokeG = document.getElementById('spokes');
   const ctrG = document.getElementById('centerDot');
 
-  /* 3a. Quadrant spokes (dashed dividers) */
+  /* 4a. Quadrant spokes */
   [0, 90, 180, 270].forEach(deg => {
     const p1 = pol(deg, 42);
     const p2 = pol(deg, 368);
@@ -167,7 +207,7 @@ function build() {
     spokeG.appendChild(l);
   });
 
-  /* 3b. Ring segments + radial labels */
+  /* 4b. Segments + radial labels */
   FIELDS.forEach(f => {
     const q = QS[f.q];
     const n = byQ[f.q].length;
@@ -180,7 +220,6 @@ function build() {
 
     fieldState[f.id] = { segments: [], label: null };
 
-    // Ring segments
     RING_IDS.forEach(rid => {
       const ring = RINGS.find(r => r.id === rid);
       const p = document.createElementNS(NS, 'path');
@@ -190,28 +229,23 @@ function build() {
       p.setAttribute('data-ring', rid);
       p.addEventListener('mouseenter', () => inspect(f.id));
       p.addEventListener('mouseleave', unfocus);
-      p.addEventListener('click', e => {
-        e.stopPropagation();
-        togglePin(f.id);
-      });
+      p.addEventListener('click', e => { e.stopPropagation(); togglePin(f.id); });
       segG.appendChild(p);
       fieldState[f.id].segments.push(p);
     });
 
-    // Radial label (curved text along arc just outside outermost ring)
+    // Radial label
     const labelR = 388;
     const g = document.createElementNS(NS, 'g');
     g.setAttribute('class', 'field-label hit');
     g.setAttribute('data-field', f.id);
 
-    // Path for textPath — flip direction on bottom half so text reads upright
     const isBottom = f._mid > 90 && f._mid < 270;
     const pathId = `arc-${f.id}`;
     const pathEl = document.createElementNS(NS, 'path');
     pathEl.setAttribute('id', pathId);
     pathEl.setAttribute('class', 'field-label-arc');
     if (isBottom) {
-      // reverse sweep: path from a2 → a1 with sweep=0
       const p1 = pol(a2, labelR), p2 = pol(a1, labelR);
       pathEl.setAttribute('d', `M${p1.x},${p1.y}A${labelR},${labelR} 0 0 0 ${p2.x},${p2.y}`);
     } else {
@@ -229,7 +263,6 @@ function build() {
     textEl.appendChild(tp);
     g.appendChild(textEl);
 
-    // subtle underline following ring edge
     const underlineR = 374;
     const u = document.createElementNS(NS, 'path');
     u.setAttribute('class', 'field-underline');
@@ -238,16 +271,13 @@ function build() {
 
     g.addEventListener('mouseenter', () => inspect(f.id));
     g.addEventListener('mouseleave', unfocus);
-    g.addEventListener('click', e => {
-      e.stopPropagation();
-      togglePin(f.id);
-    });
+    g.addEventListener('click', e => { e.stopPropagation(); togglePin(f.id); });
 
     lblG.appendChild(g);
     fieldState[f.id].label = g;
   });
 
-  /* 3c. Ring level pills (center top) */
+  /* 4c. Ring pills */
   RINGS.forEach(ring => {
     const mid = (ring.ro + ring.ri) / 2;
     const y = CY - mid;
@@ -268,7 +298,6 @@ function build() {
     rect.setAttribute('stroke', ring.col);
     g.appendChild(rect);
 
-    // left-side colored dot accent
     const dot = document.createElementNS(NS, 'circle');
     dot.setAttribute('cx', CX - w / 2 + 10);
     dot.setAttribute('cy', y);
@@ -287,64 +316,53 @@ function build() {
     rG.appendChild(g);
   });
 
-  /* 3d. Center brand mark */
-  // decorative outer ring just inside the innermost ring
+  /* 4d. Center brand mark */
   const decoRing = document.createElementNS(NS, 'circle');
-  decoRing.setAttribute('cx', CX);
-  decoRing.setAttribute('cy', CY);
-  decoRing.setAttribute('r', 40);
-  decoRing.setAttribute('class', 'center-ring');
+  decoRing.setAttribute('cx', CX); decoRing.setAttribute('cy', CY);
+  decoRing.setAttribute('r', 40); decoRing.setAttribute('class', 'center-ring');
   ctrG.appendChild(decoRing);
 
-  // solid white disk
   const disk = document.createElementNS(NS, 'circle');
-  disk.setAttribute('cx', CX);
-  disk.setAttribute('cy', CY);
-  disk.setAttribute('r', 34);
-  disk.setAttribute('class', 'center-disk');
+  disk.setAttribute('cx', CX); disk.setAttribute('cy', CY);
+  disk.setAttribute('r', 34); disk.setAttribute('class', 'center-disk');
   ctrG.appendChild(disk);
 
-  // "DENK / HORIZONTE" stacked wordmark
   const brand1 = document.createElementNS(NS, 'text');
-  brand1.setAttribute('x', CX);
-  brand1.setAttribute('y', CY - 4);
+  brand1.setAttribute('x', CX); brand1.setAttribute('y', CY - 4);
   brand1.setAttribute('class', 'center-brand');
   brand1.textContent = 'DENK';
   ctrG.appendChild(brand1);
 
   const brand2 = document.createElementNS(NS, 'text');
-  brand2.setAttribute('x', CX);
-  brand2.setAttribute('y', CY + 7);
+  brand2.setAttribute('x', CX); brand2.setAttribute('y', CY + 7);
   brand2.setAttribute('class', 'center-brand');
   brand2.textContent = 'HORIZONTE';
   ctrG.appendChild(brand2);
 
-  // accent line
   const accent = document.createElementNS(NS, 'line');
-  accent.setAttribute('x1', CX - 12);
-  accent.setAttribute('y1', CY + 13);
-  accent.setAttribute('x2', CX + 12);
-  accent.setAttribute('y2', CY + 13);
+  accent.setAttribute('x1', CX - 12); accent.setAttribute('y1', CY + 13);
+  accent.setAttribute('x2', CX + 12); accent.setAttribute('y2', CY + 13);
   accent.setAttribute('class', 'center-accent');
   ctrG.appendChild(accent);
 
   const tagline = document.createElementNS(NS, 'text');
-  tagline.setAttribute('x', CX);
-  tagline.setAttribute('y', CY + 23);
+  tagline.setAttribute('x', CX); tagline.setAttribute('y', CY + 23);
   tagline.setAttribute('class', 'center-tag');
   tagline.textContent = 'WERTEEBENEN';
   ctrG.appendChild(tagline);
 }
 
 
-/* ----- 4. Inspector ---------------------------------------------------- */
+/* ============================================================= */
+/* ===== 5. Inspector ========================================= */
+/* ============================================================= */
 
 let unfocusTimer = null;
 
 function inspect(id) {
   clearTimeout(unfocusTimer);
-  if (pinnedFieldId) return; // pinned inspector stays
-  if (inspectorFieldId === id) return; // already inspecting, avoid rerender
+  if (pinnedFieldId) return;
+  if (inspectorFieldId === id) return;
   inspectorFieldId = id;
   renderInspector(id);
   highlightInspect(id, false);
@@ -357,12 +375,11 @@ function unfocus() {
     inspectorFieldId = null;
     renderInspector(null);
     highlightInspect(null, false);
-  }, 60);
+  }, 80);
 }
 
 function togglePin(id) {
   if (pinnedFieldId === id) {
-    // unpin
     pinnedFieldId = null;
     inspectorFieldId = null;
     renderInspector(null);
@@ -376,15 +393,9 @@ function togglePin(id) {
 }
 
 function highlightInspect(id, isPinned) {
-  // Clear prior
-  document.querySelectorAll('.segment.inspecting, .segment.pinned').forEach(el => {
-    el.classList.remove('inspecting', 'pinned');
-  });
-  document.querySelectorAll('.field-label.inspecting, .field-label.pinned').forEach(el => {
-    el.classList.remove('inspecting', 'pinned');
-  });
+  document.querySelectorAll('.segment.inspecting, .segment.pinned').forEach(el => el.classList.remove('inspecting', 'pinned'));
+  document.querySelectorAll('.field-label.inspecting, .field-label.pinned').forEach(el => el.classList.remove('inspecting', 'pinned'));
   if (!id) return;
-
   const cls = isPinned ? 'pinned' : 'inspecting';
   fieldState[id].segments.forEach(el => el.classList.add(cls));
   fieldState[id].label.classList.add(cls);
@@ -404,14 +415,12 @@ function renderInspector(id) {
   const q = QS[f.q];
   const isPinned = pinnedFieldId === id;
 
-  // Which rings are "activated" for this field by the current analysis?
   const activatedRings = new Set();
-  if (lastAnalysis && lastAnalysis.activated_fields && lastAnalysis.activated_fields.includes(id)) {
-    const dom = lastAnalysis.dominant_level;
-    if (dom) activatedRings.add(dom);
+  if (lastAnalysis && (lastAnalysis.activated_fields || []).includes(id)) {
+    if (lastAnalysis.dominant_level) activatedRings.add(lastAnalysis.dominant_level);
   }
 
-  const rows = RING_IDS.slice().reverse().map(rid => {  // gelb at top → rot at bottom
+  const rows = RING_IDS.slice().reverse().map(rid => {
     const ring = RINGS.find(r => r.id === rid);
     const tip = f.tips[rid] || '—';
     const isAct = activatedRings.has(rid);
@@ -431,7 +440,7 @@ function renderInspector(id) {
         <div class="inspector-title">${f.label}</div>
         <div class="inspector-quadrant" style="color:${q.col}">${q.label}</div>
       </div>
-      <button class="inspector-pin ${isPinned ? 'pinned' : ''}" onclick="togglePin('${id}')">
+      <button class="inspector-pin ${isPinned ? 'pinned' : ''}" type="button" onclick="togglePin('${id}')">
         ${isPinned ? '📌 gepinnt' : '📍 pin'}
       </button>
     </div>
@@ -439,11 +448,13 @@ function renderInspector(id) {
 }
 
 
-/* ----- 5. Filters ------------------------------------------------------ */
+/* ============================================================= */
+/* ===== 6. Filters =========================================== */
+/* ============================================================= */
 
 function toggleRingFilter(rid) {
   ringFilter = ringFilter === rid ? null : rid;
-  quadFilter = null; // filters are mutually exclusive for clarity
+  quadFilter = null;
   applyFilters();
 }
 
@@ -454,26 +465,18 @@ function toggleQuadFilter(qid) {
 }
 
 function clearFilters() {
-  ringFilter = null;
-  quadFilter = null;
-  applyFilters();
+  ringFilter = null; quadFilter = null; applyFilters();
 }
 
 function applyFilters() {
-  // Update chip state
-  document.querySelectorAll('.filter-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.ring === ringFilter);
-  });
-  document.querySelectorAll('.ring-pill').forEach(p => {
-    p.classList.toggle('active', p.dataset.ring === ringFilter);
-  });
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.ring === ringFilter));
+  document.querySelectorAll('.ring-pill').forEach(p => p.classList.toggle('active', p.dataset.ring === ringFilter));
   document.querySelectorAll('.q-corner').forEach(c => {
     c.classList.toggle('active', c.dataset.q === quadFilter);
     c.classList.toggle('dimmed', quadFilter && c.dataset.q !== quadFilter);
   });
   document.getElementById('filter-clear').hidden = !(ringFilter || quadFilter);
 
-  // Segments
   document.querySelectorAll('.segment').forEach(seg => {
     seg.classList.remove('filter-on', 'dimmed');
     const field = FIELDS.find(f => f.id === seg.dataset.field);
@@ -485,19 +488,19 @@ function applyFilters() {
     }
   });
 
-  // Labels
   document.querySelectorAll('.field-label').forEach(lbl => {
     lbl.classList.remove('dimmed');
     const field = FIELDS.find(f => f.id === lbl.dataset.field);
     if (quadFilter && field.q !== quadFilter) lbl.classList.add('dimmed');
   });
 
-  // Reapply analysis highlights so they aren't wiped
   if (lastAnalysis) reapplyActivation(lastAnalysis);
 }
 
 
-/* ----- 6. API helper --------------------------------------------------- */
+/* ============================================================= */
+/* ===== 7. API helper ======================================== */
+/* ============================================================= */
 
 async function callAPI(system, userMsg) {
   const r = await fetch('/.netlify/functions/claude', {
@@ -529,14 +532,15 @@ function parseJSON(raw) {
 }
 
 
-/* ----- 7. Step 1: Fragen generieren ----------------------------------- */
-
-let decisionText = '';
+/* ============================================================= */
+/* ===== 8. Flow: get questions =============================== */
+/* ============================================================= */
 
 async function getQuestions() {
   const input = document.getElementById('inp').value.trim();
   if (!input) return;
   decisionText = input;
+  saveState({ decision: input, step: 'input' });
 
   const btn = document.getElementById('btn1');
   const load = document.getElementById('load1');
@@ -555,10 +559,12 @@ Antworte NUR mit validem JSON, kein Markdown:
   try {
     const raw = await callAPI(sys, input);
     const result = parseJSON(raw);
+    lastQuestions = result;
+    saveState({ questions: result, step: 'questions', answers: [] });
     showStep2(result);
+    updateHeaderReset();
   } catch (err) {
-    document.getElementById('res').innerHTML =
-      `<p style="color:#c0392b;font-size:.85rem;padding:8px 0">Fehler: ${err.message}</p>`;
+    showError(err.message);
   } finally {
     btn.disabled = false;
     load.classList.remove('active');
@@ -569,6 +575,7 @@ function showStep2(questions) {
   document.getElementById('step1').setAttribute('hidden', '');
   document.getElementById('step2').removeAttribute('hidden');
   document.getElementById('dec-summary').textContent = decisionText;
+  document.getElementById('panelTitle').textContent = 'Diagnose';
 
   const container = document.getElementById('q-container');
   container.innerHTML = '';
@@ -580,35 +587,40 @@ function showStep2(questions) {
       <textarea class="q-input" id="ans${i + 1}" placeholder="Ihre Antwort …"></textarea>`;
     container.appendChild(div);
   });
-  document.getElementById('ans1')?.focus();
+
+  // Wire auto-save on answers
+  container.querySelectorAll('.q-input').forEach(ta => {
+    ta.addEventListener('input', () => {
+      const answers = [1, 2, 3].map(i => document.getElementById(`ans${i}`)?.value || '');
+      saveState({ answers });
+    });
+  });
 }
 
-function resetFlow() {
+function backToStep1() {
   document.getElementById('step2').setAttribute('hidden', '');
   document.getElementById('step1').removeAttribute('hidden');
-  document.getElementById('app').setAttribute('data-mode', 'input');
-  document.getElementById('res').innerHTML =
-    `<p class="result-empty">Beschreiben Sie Ihre Entscheidungssituation &mdash; die KI stellt drei Diagnosefragen, bevor die Landkarte analysiert wird.</p>`;
-  resetAll();
-  lastAnalysis = null;
-  pinnedFieldId = null;
-  inspectorFieldId = null;
-  renderInspector(null);
+  document.getElementById('panelTitle').textContent = 'Situation';
 }
 
 
-/* ----- 8. Step 2: Analyse --------------------------------------------- */
+/* ============================================================= */
+/* ===== 9. Flow: analyse ===================================== */
+/* ============================================================= */
 
 async function analyse() {
   const a1 = document.getElementById('ans1')?.value.trim() || '';
   const a2 = document.getElementById('ans2')?.value.trim() || '';
   const a3 = document.getElementById('ans3')?.value.trim() || '';
 
+  saveState({ answers: [a1, a2, a3] });
+
   const btn = document.getElementById('btn2');
   const load = document.getElementById('load2');
+  const btnText = document.getElementById('btn2Text');
   btn.disabled = true;
   load.classList.add('active');
-  document.getElementById('res').innerHTML = '';
+  setResultStatus('analyzing', 'Analysiere …');
 
   const q1 = document.querySelector('#q-container .q-block:nth-child(1) .q-label')?.textContent || 'Hauptgrund';
   const q2 = document.querySelector('#q-container .q-block:nth-child(2) .q-label')?.textContent || 'Erhofftes Ergebnis';
@@ -646,12 +658,20 @@ activated_fields: 4-12 Felder. primary_fields: 2-4 kritischste.`;
     const raw = await callAPI(sys, userContext);
     const result = parseJSON(raw);
     lastAnalysis = result;
+    saveState({
+      analysis: result,
+      step: 'results',
+      answers: [a1, a2, a3],
+    });
     document.getElementById('app').setAttribute('data-mode', 'results');
     applyActivation(result);
     render(result);
+    setResultStatus('active', 'Abgeschlossen');
+    btnText.textContent = 'Erneut analysieren';
+    updateHeaderReset();
   } catch (err) {
-    document.getElementById('res').innerHTML =
-      `<p style="color:#c0392b;font-size:.85rem;padding:8px 0">Fehler: ${err.message}</p>`;
+    showError(err.message);
+    setResultStatus('', 'Fehler');
     resetAll();
   } finally {
     btn.disabled = false;
@@ -659,8 +679,21 @@ activated_fields: 4-12 Felder. primary_fields: 2-4 kritischste.`;
   }
 }
 
+function showError(msg) {
+  const res = document.getElementById('res');
+  res.innerHTML = `<div style="padding:20px;color:var(--rot);font-size:.85rem;background:rgba(192,57,43,.08);border-left:3px solid var(--rot);border-radius:0 4px 4px 0">Fehler: ${msg}</div>`;
+}
 
-/* ----- 8a. Apply/reapply analysis activation --------------------------- */
+function setResultStatus(cls, text) {
+  const el = document.getElementById('resultStatus');
+  el.className = 'result-status' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+}
+
+
+/* ============================================================= */
+/* ===== 10. Activate segments ================================ */
+/* ============================================================= */
 
 function applyActivation(result) {
   resetAll();
@@ -668,14 +701,12 @@ function applyActivation(result) {
   const primary = result.primary_fields || [];
   const dominant = result.dominant_level;
 
-  // Dim non-activated fields' labels
   document.querySelectorAll('.field-label').forEach(lbl => {
     const fid = lbl.dataset.field;
     if (activated.includes(fid)) lbl.classList.add('activated');
     else lbl.classList.add('dimmed');
   });
 
-  // Stagger-activate segments
   activated.forEach((fid, idx) => {
     const segs = fieldState[fid]?.segments || [];
     segs.forEach(seg => {
@@ -690,7 +721,6 @@ function applyActivation(result) {
     });
   });
 
-  // Non-activated fields → dim all their segments
   FIELDS.forEach(f => {
     if (!activated.includes(f.id)) {
       fieldState[f.id].segments.forEach(seg => seg.classList.add('dimmed'));
@@ -699,7 +729,6 @@ function applyActivation(result) {
 }
 
 function reapplyActivation(result) {
-  // Applied on top of filter changes so analysis highlights persist
   const activated = result.activated_fields || [];
   const primary = result.primary_fields || [];
   const dominant = result.dominant_level;
@@ -734,7 +763,6 @@ function pulseField(id) {
     el.classList.add('pulse');
     el.addEventListener('animationend', () => el.classList.remove('pulse'), { once: true });
   });
-  // Also inspect it
   pinnedFieldId = id;
   inspectorFieldId = id;
   renderInspector(id);
@@ -742,7 +770,9 @@ function pulseField(id) {
 }
 
 
-/* ----- 9. Render results ---------------------------------------------- */
+/* ============================================================= */
+/* ===== 11. Render analysis panel ============================ */
+/* ============================================================= */
 
 function render(r) {
   const qL = { ii: 'Innen · Ich', ai: 'Außen · Ich', wi: 'Innen · Wir', wa: 'Außen · Wir' };
@@ -755,9 +785,7 @@ function render(r) {
     const f = FIELDS.find(x => x.id === id);
     if (!f) return '';
     const pri = primarySet.has(id);
-    return `<span class="field-tag ${f.q} ${pri ? 'primary' : ''}"
-              onclick="pulseField('${id}')"
-              title="Auf Karte zeigen & pinnen">${f.label}</span>`;
+    return `<span class="field-tag ${f.q} ${pri ? 'primary' : ''}" onclick="pulseField('${id}')" title="Auf Karte zeigen">${f.label}</span>`;
   }).join('');
 
   const li = a => (a || []).map(x => `<li>${x}</li>`).join('');
@@ -767,12 +795,12 @@ function render(r) {
 
   document.getElementById('res').innerHTML = `
     <div class="result-section">
-      <h3>Aktivierte Felder <span class="section-hint">★ = kritisch · Klick zeigt Position</span></h3>
+      <h3>Aktivierte Felder <span class="section-hint">★ kritisch · Klick zeigt</span></h3>
       <div class="field-tags">${tags}</div>
     </div>
 
     <div class="result-section">
-      <h3>Werteebene &amp; Spannungsfeld</h3>
+      <h3>Werteebene</h3>
       <div class="level-block" style="border-left-color:${dc}">
         <div class="insight-label" style="color:${dc}">${dl}</div>
         <div class="insight-text">${r.dominant_level_begruendung || ''}</div>
@@ -806,9 +834,9 @@ function render(r) {
       <h3>Quadranten-Fokus</h3>
       <div class="quadrant-grid">
         ${Object.entries(qf).map(([q, t]) => `
-          <div class="insight-block" style="background:var(--surface-alt);padding:12px 14px;border-radius:6px;border-left:3px solid ${qC[q] || '#888'}">
-            <div class="insight-label" style="color:${qC[q] || '#888'};margin-bottom:6px">${qL[q] || q}</div>
-            <div class="insight-text" style="font-size:.84rem">${t}</div>
+          <div class="insight-block" style="background:var(--surface-alt);padding:11px 13px;border-radius:6px;border-left:3px solid ${qC[q] || '#888'}">
+            <div class="insight-label" style="color:${qC[q] || '#888'};margin-bottom:5px">${qL[q] || q}</div>
+            <div class="insight-text" style="font-size:.82rem">${t}</div>
           </div>`).join('')}
       </div>
     </div>
@@ -817,13 +845,206 @@ function render(r) {
       <h3>Reflexionsfragen</h3>
       <div class="insight-text"><ul>${li(r.reflexionsfragen)}</ul></div>
     </div>
-
-    <button class="reset-btn" onclick="resetFlow()">Neue Analyse starten</button>
   `;
 }
 
 
-/* ----- 10. Event wiring ------------------------------------------------ */
+/* ============================================================= */
+/* ===== 12. Reset flow ======================================= */
+/* ============================================================= */
+
+function resetFlow() {
+  clearState();
+  lastAnalysis = null;
+  lastQuestions = null;
+  decisionText = '';
+  pinnedFieldId = null;
+  inspectorFieldId = null;
+
+  document.getElementById('inp').value = '';
+  document.getElementById('q-container').innerHTML = '';
+  document.getElementById('step2').setAttribute('hidden', '');
+  document.getElementById('step1').removeAttribute('hidden');
+  document.getElementById('app').setAttribute('data-mode', 'input');
+  document.getElementById('panelTitle').textContent = 'Situation';
+  document.getElementById('btn2Text').textContent = 'Landkarte analysieren';
+
+  document.getElementById('res').innerHTML = `
+    <div class="result-empty-state">
+      <div class="result-empty-icon">◎</div>
+      <div class="result-empty-title">Noch keine Analyse</div>
+      <p class="result-empty-text">Sobald Sie die Landkarte analysieren lassen, erscheinen hier:</p>
+      <ul class="result-empty-list">
+        <li>Aktivierte Felder auf der Karte</li>
+        <li>Dominante Werteebene &amp; Spannungsfeld</li>
+        <li>Chancen, Risiken, blinde Flecken</li>
+        <li>Quadranten-Fokus</li>
+        <li>Reflexionsfragen</li>
+      </ul>
+    </div>`;
+  setResultStatus('', 'Warten');
+  resetAll();
+  renderInspector(null);
+  updateHeaderReset();
+
+  // Keep layout preferences but clear data
+  // (user's column widths stay)
+}
+
+
+/* ============================================================= */
+/* ===== 13. Collapse panel =================================== */
+/* ============================================================= */
+
+function toggleInputPanel() {
+  const app = document.getElementById('app');
+  const collapsed = app.classList.toggle('input-collapsed');
+  saveState({ inputCollapsed: collapsed });
+  updateStripDots();
+}
+
+function updateStripDots() {
+  const state = loadState();
+  const dots = document.querySelectorAll('.strip-dots .dot');
+  if (!dots.length) return;
+
+  // Dot states: 1 = situation, 2 = questions, 3 = analysis
+  const step = state.step || 'input';
+  dots.forEach(d => d.classList.remove('done', 'active'));
+
+  if (step === 'input') {
+    dots[0].classList.add('active');
+  } else if (step === 'questions') {
+    dots[0].classList.add('done');
+    dots[1].classList.add('active');
+  } else if (step === 'results') {
+    dots[0].classList.add('done');
+    dots[1].classList.add('done');
+    dots[2].classList.add('active');
+  }
+}
+
+function updateHeaderReset() {
+  const state = loadState();
+  const btn = document.getElementById('headerResetBtn');
+  btn.hidden = !(state.questions || state.analysis);
+  updateStripDots();
+}
+
+
+/* ============================================================= */
+/* ===== 14. Resize handles =================================== */
+/* ============================================================= */
+
+function initResize() {
+  document.querySelectorAll('.resize-handle').forEach(h => {
+    h.addEventListener('pointerdown', startResize);
+  });
+}
+
+let resizeActive = null;
+
+function startResize(e) {
+  // Only on desktop
+  if (window.innerWidth < 1024) return;
+  e.preventDefault();
+  const handle = e.currentTarget;
+  const col = handle.dataset.col;
+  if (col === 'input' && document.getElementById('app').classList.contains('input-collapsed')) return;
+
+  handle.setPointerCapture(e.pointerId);
+  handle.classList.add('dragging');
+  document.body.classList.add('resizing');
+  document.getElementById('workspace').classList.add('dragging');
+
+  const startX = e.clientX;
+  const cssVar = `--col-${col}`;
+  const current = parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVar)) || 340;
+  const minVar = `--col-${col}-min`;
+  const maxVar = `--col-${col}-max`;
+  const min = parseInt(getComputedStyle(document.documentElement).getPropertyValue(minVar)) || 260;
+  const max = parseInt(getComputedStyle(document.documentElement).getPropertyValue(maxVar)) || 700;
+
+  resizeActive = { handle, col, startX, current, min, max, pointerId: e.pointerId, cssVar };
+
+  handle.addEventListener('pointermove', onResize);
+  handle.addEventListener('pointerup', endResize);
+  handle.addEventListener('pointercancel', endResize);
+}
+
+function onResize(e) {
+  if (!resizeActive) return;
+  let delta = e.clientX - resizeActive.startX;
+  // Right column: moving right should shrink it, so invert
+  if (resizeActive.col === 'results') delta = -delta;
+  let next = resizeActive.current + delta;
+
+  // Also cap so center column never goes below 400
+  const ws = document.getElementById('workspace').getBoundingClientRect().width;
+  const handleWidth = 12; // 2 handles × 6px
+  const otherCol = resizeActive.col === 'input'
+    ? parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-results'))
+    : parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-input'));
+  const maxAllowed = ws - handleWidth - otherCol - 400;
+
+  next = Math.max(resizeActive.min, Math.min(resizeActive.max, Math.min(next, maxAllowed)));
+  document.documentElement.style.setProperty(resizeActive.cssVar, next + 'px');
+}
+
+function endResize(e) {
+  if (!resizeActive) return;
+  const { handle, col, pointerId, cssVar } = resizeActive;
+  try { handle.releasePointerCapture(pointerId); } catch (e) { /* ignore */ }
+  handle.classList.remove('dragging');
+  document.body.classList.remove('resizing');
+  document.getElementById('workspace').classList.remove('dragging');
+  handle.removeEventListener('pointermove', onResize);
+  handle.removeEventListener('pointerup', endResize);
+  handle.removeEventListener('pointercancel', endResize);
+
+  // Save final width
+  const final = parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVar));
+  if (col === 'input') saveState({ colInput: final });
+  else saveState({ colResults: final });
+  resizeActive = null;
+}
+
+
+/* ============================================================= */
+/* ===== 15. Window resize (reclamp columns) ================== */
+/* ============================================================= */
+
+function handleWindowResize() {
+  if (window.innerWidth < 1024) return;
+  const ws = document.getElementById('workspace').getBoundingClientRect().width;
+  const handleWidth = 12;
+  let colInput = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-input'));
+  let colResults = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-results'));
+  const minCenter = 400;
+
+  // If total exceeds available, shrink proportionally
+  const totalFixed = colInput + colResults + handleWidth;
+  if (totalFixed + minCenter > ws) {
+    const excess = totalFixed + minCenter - ws;
+    // Shrink results first (typically more space), then input
+    const resultsMin = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-results-min')) || 340;
+    const inputMin = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--col-input-min')) || 260;
+    const resultsGiveUp = Math.min(excess, colResults - resultsMin);
+    colResults -= resultsGiveUp;
+    const remaining = excess - resultsGiveUp;
+    if (remaining > 0) {
+      const inputGiveUp = Math.min(remaining, colInput - inputMin);
+      colInput -= inputGiveUp;
+    }
+    document.documentElement.style.setProperty('--col-input', colInput + 'px');
+    document.documentElement.style.setProperty('--col-results', colResults + 'px');
+  }
+}
+
+
+/* ============================================================= */
+/* ===== 16. Event wiring ===================================== */
+/* ============================================================= */
 
 function wireEvents() {
   document.querySelectorAll('.filter-chip').forEach(chip => {
@@ -835,7 +1056,6 @@ function wireEvents() {
     corner.addEventListener('click', () => toggleQuadFilter(corner.dataset.q));
   });
 
-  // ESC unpins
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && pinnedFieldId) {
       pinnedFieldId = null;
@@ -844,7 +1064,6 @@ function wireEvents() {
     }
   });
 
-  // Click outside map to unpin
   document.addEventListener('click', e => {
     if (!e.target.closest('.map-container') && !e.target.closest('.inspector') && !e.target.closest('.field-tag')) {
       if (pinnedFieldId) {
@@ -854,10 +1073,80 @@ function wireEvents() {
       }
     }
   });
+
+  // Decision textarea autosave
+  document.getElementById('inp').addEventListener('input', e => {
+    decisionText = e.target.value;
+    saveState({ decision: e.target.value });
+  });
+
+  // Window resize (reclamp)
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(handleWindowResize, 120);
+  });
 }
 
 
-/* ----- 11. Boot -------------------------------------------------------- */
+/* ============================================================= */
+/* ===== 17. Restore on load ================================== */
+/* ============================================================= */
+
+function restoreState() {
+  const s = loadState();
+
+  // Layout
+  if (s.colInput) document.documentElement.style.setProperty('--col-input', s.colInput + 'px');
+  if (s.colResults) document.documentElement.style.setProperty('--col-results', s.colResults + 'px');
+  if (s.inputCollapsed) document.getElementById('app').classList.add('input-collapsed');
+
+  // Decision
+  if (s.decision) {
+    decisionText = s.decision;
+    document.getElementById('inp').value = s.decision;
+  }
+
+  // Analysis exists → full results view
+  if (s.analysis && s.questions) {
+    lastQuestions = s.questions;
+    lastAnalysis = s.analysis;
+    showStep2(s.questions);
+    if (s.answers) {
+      s.answers.forEach((a, i) => {
+        const el = document.getElementById(`ans${i + 1}`);
+        if (el) el.value = a || '';
+      });
+    }
+    document.getElementById('btn2Text').textContent = 'Erneut analysieren';
+    document.getElementById('app').setAttribute('data-mode', 'results');
+    applyActivation(s.analysis);
+    render(s.analysis);
+    setResultStatus('active', 'Abgeschlossen');
+  }
+  // Questions exist but no analysis → step 2
+  else if (s.questions) {
+    lastQuestions = s.questions;
+    showStep2(s.questions);
+    if (s.answers) {
+      s.answers.forEach((a, i) => {
+        const el = document.getElementById(`ans${i + 1}`);
+        if (el) el.value = a || '';
+      });
+    }
+    setResultStatus('', 'Warten');
+  }
+
+  updateHeaderReset();
+}
+
+
+/* ============================================================= */
+/* ===== 18. Boot ============================================= */
+/* ============================================================= */
 
 build();
 wireEvents();
+initResize();
+restoreState();
+handleWindowResize();

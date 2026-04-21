@@ -17,152 +17,205 @@
 
 <body>
   <div class="app" id="app" data-mode="input">
-    <!-- ============= HEADER ============= -->
+
+    <!-- ===================== HEADER ===================== -->
     <header>
       <div class="brand">
         <h1>Denkhorizonte</h1>
         <span>Entscheidungsreflektor</span>
       </div>
       <div class="header-actions">
-        <button id="mode-toggle" class="header-btn" hidden>
-          <span class="icon">⇄</span> Layout
+        <button class="header-btn" id="headerResetBtn" type="button" hidden onclick="resetFlow()">
+          <span class="icon">↻</span> Neu starten
         </button>
       </div>
     </header>
 
-    <!-- ============= MAP SIDE ============= -->
-    <section class="map-side">
-      <div class="map-container" id="mc">
-        <!-- Quadrant corner labels (always visible) -->
-        <div class="q-corner q-corner-tl" data-q="ii">
-          <span class="q-numeral">I</span>
-          <small>Innen</small>
-          <strong>Ich</strong>
-        </div>
-        <div class="q-corner q-corner-tr" data-q="ai">
-          <span class="q-numeral">II</span>
-          <small>Außen</small>
-          <strong>Ich</strong>
-        </div>
-        <div class="q-corner q-corner-br" data-q="wa">
-          <span class="q-numeral">III</span>
-          <small>Außen</small>
-          <strong>Wir</strong>
-        </div>
-        <div class="q-corner q-corner-bl" data-q="wi">
-          <span class="q-numeral">IV</span>
-          <small>Innen</small>
-          <strong>Wir</strong>
+    <!-- ===================== WORKSPACE ===================== -->
+    <div class="workspace" id="workspace">
+
+      <!-- ========== LEFT: Input panel (collapsible) ========== -->
+      <aside class="panel panel-left" id="panelLeft">
+
+        <div class="collapse-strip" id="collapseStrip">
+          <button class="strip-toggle" type="button" onclick="toggleInputPanel()" title="Eingabe öffnen">
+            <span class="chev">›</span>
+          </button>
+          <div class="strip-label">EINGABE</div>
+          <div class="strip-dots">
+            <span class="dot" data-step="1"></span>
+            <span class="dot" data-step="2"></span>
+            <span class="dot" data-step="3"></span>
+          </div>
         </div>
 
-        <svg id="svg" viewBox="0 0 900 900" xmlns="http://www.w3.org/2000/svg" role="img"
-          aria-label="Werteebenen-Landkarte">
-          <defs>
-            <!-- radial gradient for subtle depth -->
-            <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#fff" stop-opacity="0.55" />
-              <stop offset="100%" stop-color="#fff" stop-opacity="0" />
-            </radialGradient>
-            <filter id="primaryGlow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+        <div class="panel-body" id="panelLeftBody">
+          <div class="panel-head">
+            <div>
+              <div class="panel-eyebrow">Eingabe</div>
+              <h2 class="panel-title" id="panelTitle">Situation</h2>
+            </div>
+            <button class="collapse-btn" type="button" onclick="toggleInputPanel()" title="Panel einklappen">
+              <span class="chev">‹</span>
+            </button>
+          </div>
 
-          <g id="spokes"></g> <!-- quadrant divider spokes -->
-          <g id="segs"></g> <!-- ring segments (clickable) -->
-          <g id="fieldLabels"></g> <!-- radial field names -->
-          <g id="rnames"></g> <!-- ring level pills -->
-          <g id="centerDot"></g> <!-- center decoration -->
-        </svg>
-      </div>
+          <div class="panel-scroll">
 
-      <!-- Inspector (persistent) -->
-      <div class="inspector" id="inspector">
-        <div class="inspector-empty">
-          <span class="dot"></span>
-          Fahren Sie über ein Feld oder klicken Sie es an &mdash; die fünf Werteausprägungen erscheinen hier.
+            <div class="step-pane" id="step1">
+              <div class="step-indicator">
+                <span class="step-dot active"></span>
+                <span class="step-dot"></span>
+                <span class="step-dot"></span>
+                <span class="step-text">Schritt 1 von 3 · Situation</span>
+              </div>
+              <p class="step-hint">Beschreiben Sie den Kontext in 1&ndash;3 Sätzen &mdash; die KI leitet daraus drei
+                Diagnosefragen ab.</p>
+              <textarea id="inp"
+                placeholder="Beispiel: Wir überlegen, ob wir eine neue Vertriebsregion aufbauen oder den Bestand konsolidieren …"></textarea>
+              <button class="btn" id="btn1" type="button" onclick="getQuestions()">
+                Diagnosefragen generieren
+                <span class="arrow">→</span>
+              </button>
+              <div class="loading" id="load1">
+                <span class="spinner"></span>
+                <span>Fragen werden formuliert …</span>
+              </div>
+            </div>
+
+            <div class="step-pane" id="step2" hidden>
+              <div class="step-indicator">
+                <span class="step-dot done"></span>
+                <span class="step-dot active"></span>
+                <span class="step-dot"></span>
+                <span class="step-text" id="step2Label">Schritt 2 von 3 · Diagnose</span>
+              </div>
+              <div class="decision-summary" id="dec-summary"></div>
+              <div id="q-container"></div>
+              <button class="btn" id="btn2" type="button" onclick="analyse()">
+                <span id="btn2Text">Landkarte analysieren</span>
+                <span class="arrow">→</span>
+              </button>
+              <div class="sub-actions">
+                <button class="back-link" type="button" onclick="backToStep1()">← Entscheidung ändern</button>
+                <button class="back-link danger" type="button" onclick="resetFlow()">Alles zurücksetzen</button>
+              </div>
+              <div class="loading" id="load2">
+                <span class="spinner"></span>
+                <span>Werteebenen werden aktiviert …</span>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
+      </aside>
 
-      <!-- Filter chips -->
-      <div class="filters" id="filters">
-        <span class="filter-label">Ebene filtern:</span>
-        <button class="filter-chip" data-ring="rot">
-          <span class="swatch" style="background:#C0392B"></span>Rot · Macht
-        </button>
-        <button class="filter-chip" data-ring="blau">
-          <span class="swatch" style="background:#2E6DA4"></span>Blau · Ordnung
-        </button>
-        <button class="filter-chip" data-ring="orange">
-          <span class="swatch" style="background:#D4861A"></span>Orange · Leistung
-        </button>
-        <button class="filter-chip" data-ring="gruen">
-          <span class="swatch" style="background:#4A8C5C"></span>Grün · Gemeinschaft
-        </button>
-        <button class="filter-chip" data-ring="gelb">
-          <span class="swatch" style="background:#B8960C"></span>Gelb · Integral
-        </button>
-        <button class="filter-clear" id="filter-clear" hidden>× Filter aufheben</button>
-      </div>
-    </section>
+      <div class="resize-handle" id="handleLeft" data-col="input" title="Breite ziehen"></div>
 
-    <!-- ============= PANEL ============= -->
-    <aside class="panel" id="panel">
-      <!-- Step 1: decision input -->
-      <div class="panel-input" id="step1">
-        <div class="step-indicator">
-          <span class="step-dot active"></span>
-          <span class="step-dot"></span>
-          <span class="step-dot"></span>
-          <span class="step-text">Schritt 1 von 3 · Situation</span>
-        </div>
-        <h2>Welche Entscheidung steht an?</h2>
-        <p>Beschreiben Sie den Kontext in 1&ndash;3 Sätzen &mdash; die KI leitet daraus drei Diagnosefragen ab.</p>
-        <textarea id="inp"
-          placeholder="Beispiel: Wir überlegen, ob wir eine neue Vertriebsregion aufbauen oder den Bestand konsolidieren …"></textarea>
-        <button class="btn" id="btn1" onclick="getQuestions()">
-          Diagnosefragen generieren
-          <span class="arrow">→</span>
-        </button>
-        <div class="loading" id="load1">
-          <span class="spinner"></span>
-          <span>Fragen werden formuliert …</span>
-        </div>
-      </div>
+      <!-- ========== CENTER: Map ========== -->
+      <section class="map-side" id="mapSide">
 
-      <!-- Step 2: answer questions -->
-      <div class="panel-input" id="step2" hidden>
-        <div class="step-indicator">
-          <span class="step-dot done"></span>
-          <span class="step-dot active"></span>
-          <span class="step-dot"></span>
-          <span class="step-text">Schritt 2 von 3 · Diagnose</span>
-        </div>
-        <div class="decision-summary" id="dec-summary"></div>
-        <div id="q-container"></div>
-        <button class="btn" id="btn2" onclick="analyse()">
-          Landkarte analysieren
-          <span class="arrow">→</span>
-        </button>
-        <button class="back-link" onclick="resetFlow()">← Entscheidung ändern</button>
-        <div class="loading" id="load2">
-          <span class="spinner"></span>
-          <span>Werteebenen werden aktiviert …</span>
-        </div>
-      </div>
+        <div class="map-container" id="mc">
+          <div class="q-corner q-corner-tl" data-q="ii">
+            <span class="q-numeral">I</span>
+            <small>Innen</small>
+            <strong>Ich</strong>
+          </div>
+          <div class="q-corner q-corner-tr" data-q="ai">
+            <span class="q-numeral">II</span>
+            <small>Außen</small>
+            <strong>Ich</strong>
+          </div>
+          <div class="q-corner q-corner-br" data-q="wa">
+            <span class="q-numeral">III</span>
+            <small>Außen</small>
+            <strong>Wir</strong>
+          </div>
+          <div class="q-corner q-corner-bl" data-q="wi">
+            <span class="q-numeral">IV</span>
+            <small>Innen</small>
+            <strong>Wir</strong>
+          </div>
 
-      <!-- Results -->
-      <div class="panel-results" id="res">
-        <p class="result-empty">
-          Beschreiben Sie Ihre Entscheidungssituation &mdash; die KI stellt drei Diagnosefragen, bevor die Landkarte
-          analysiert wird.
-        </p>
-      </div>
-    </aside>
+          <svg id="svg" viewBox="0 0 900 900" xmlns="http://www.w3.org/2000/svg" role="img"
+            aria-label="Werteebenen-Landkarte">
+            <defs>
+              <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fff" stop-opacity="0.55" />
+                <stop offset="100%" stop-color="#fff" stop-opacity="0" />
+              </radialGradient>
+              <filter id="primaryGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <g id="spokes"></g>
+            <g id="segs"></g>
+            <g id="fieldLabels"></g>
+            <g id="rnames"></g>
+            <g id="centerDot"></g>
+          </svg>
+        </div>
+
+        <div class="inspector" id="inspector">
+          <div class="inspector-empty">
+            <span class="dot"></span>
+            Fahren Sie über ein Feld oder klicken Sie es an &mdash; die fünf Werteausprägungen erscheinen hier.
+          </div>
+        </div>
+
+        <div class="filters" id="filters">
+          <span class="filter-label">Ebene:</span>
+          <button class="filter-chip" type="button" data-ring="rot"><span class="swatch"
+              style="background:#C0392B"></span>Rot</button>
+          <button class="filter-chip" type="button" data-ring="blau"><span class="swatch"
+              style="background:#2E6DA4"></span>Blau</button>
+          <button class="filter-chip" type="button" data-ring="orange"><span class="swatch"
+              style="background:#D4861A"></span>Orange</button>
+          <button class="filter-chip" type="button" data-ring="gruen"><span class="swatch"
+              style="background:#4A8C5C"></span>Grün</button>
+          <button class="filter-chip" type="button" data-ring="gelb"><span class="swatch"
+              style="background:#B8960C"></span>Gelb</button>
+          <button class="filter-clear" type="button" id="filter-clear" hidden>× aufheben</button>
+        </div>
+      </section>
+
+      <div class="resize-handle" id="handleRight" data-col="results" title="Breite ziehen"></div>
+
+      <!-- ========== RIGHT: Analysis ========== -->
+      <aside class="panel panel-right" id="panelRight">
+        <div class="panel-body">
+          <div class="panel-head">
+            <div>
+              <div class="panel-eyebrow">Ergebnis</div>
+              <h2 class="panel-title">Analyse</h2>
+            </div>
+            <span class="result-status" id="resultStatus">Warten</span>
+          </div>
+          <div class="panel-scroll" id="res">
+            <div class="result-empty-state">
+              <div class="result-empty-icon">◎</div>
+              <div class="result-empty-title">Noch keine Analyse</div>
+              <p class="result-empty-text">
+                Sobald Sie die Landkarte analysieren lassen, erscheinen hier:
+              </p>
+              <ul class="result-empty-list">
+                <li>Aktivierte Felder auf der Karte</li>
+                <li>Dominante Werteebene &amp; Spannungsfeld</li>
+                <li>Chancen, Risiken, blinde Flecken</li>
+                <li>Quadranten-Fokus</li>
+                <li>Reflexionsfragen</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
   </div>
 
   <div id="tip" role="tooltip"></div>
