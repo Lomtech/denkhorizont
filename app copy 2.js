@@ -252,8 +252,7 @@ function build() {
     const mid = (ring.ro + ring.ri) / 2;
     const y = CY - mid;
     const text = `${ring.label.toUpperCase()} · ${ring.keyword}`;
-    const w = text.length * 5.9 + 28;
-    const h = 22;
+    const w = text.length * 5.8 + 18;
 
     const g = document.createElementNS(NS, 'g');
     g.setAttribute('class', 'ring-pill');
@@ -261,23 +260,15 @@ function build() {
 
     const rect = document.createElementNS(NS, 'rect');
     rect.setAttribute('x', CX - w / 2);
-    rect.setAttribute('y', y - h / 2);
+    rect.setAttribute('y', y - 9.5);
     rect.setAttribute('width', w);
-    rect.setAttribute('height', h);
-    rect.setAttribute('rx', h / 2);
+    rect.setAttribute('height', 19);
+    rect.setAttribute('rx', 9.5);
     rect.setAttribute('stroke', ring.col);
     g.appendChild(rect);
 
-    // left-side colored dot accent
-    const dot = document.createElementNS(NS, 'circle');
-    dot.setAttribute('cx', CX - w / 2 + 10);
-    dot.setAttribute('cy', y);
-    dot.setAttribute('r', 4);
-    dot.setAttribute('fill', ring.col);
-    g.appendChild(dot);
-
     const t = document.createElementNS(NS, 'text');
-    t.setAttribute('x', CX + 6);
+    t.setAttribute('x', CX);
     t.setAttribute('y', y + 3.5);
     t.setAttribute('fill', ring.col);
     t.textContent = text;
@@ -287,53 +278,33 @@ function build() {
     rG.appendChild(g);
   });
 
-  /* 3d. Center brand mark */
-  // decorative outer ring just inside the innermost ring
-  const decoRing = document.createElementNS(NS, 'circle');
-  decoRing.setAttribute('cx', CX);
-  decoRing.setAttribute('cy', CY);
-  decoRing.setAttribute('r', 40);
-  decoRing.setAttribute('class', 'center-ring');
-  ctrG.appendChild(decoRing);
+  /* 3d. Center dot & label */
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('cx', CX);
+  dot.setAttribute('cy', CY);
+  dot.setAttribute('r', 36);
+  dot.setAttribute('class', 'center-dot');
+  ctrG.appendChild(dot);
 
-  // solid white disk
-  const disk = document.createElementNS(NS, 'circle');
-  disk.setAttribute('cx', CX);
-  disk.setAttribute('cy', CY);
-  disk.setAttribute('r', 34);
-  disk.setAttribute('class', 'center-disk');
-  ctrG.appendChild(disk);
+  const ring1 = document.createElementNS(NS, 'circle');
+  ring1.setAttribute('cx', CX);
+  ring1.setAttribute('cy', CY);
+  ring1.setAttribute('r', 36);
+  ring1.setAttribute('fill', 'url(#centerGlow)');
+  ctrG.appendChild(ring1);
 
-  // "DENK / HORIZONTE" stacked wordmark
-  const brand1 = document.createElementNS(NS, 'text');
-  brand1.setAttribute('x', CX);
-  brand1.setAttribute('y', CY - 4);
-  brand1.setAttribute('class', 'center-brand');
-  brand1.textContent = 'DENK';
-  ctrG.appendChild(brand1);
-
-  const brand2 = document.createElementNS(NS, 'text');
-  brand2.setAttribute('x', CX);
-  brand2.setAttribute('y', CY + 7);
-  brand2.setAttribute('class', 'center-brand');
-  brand2.textContent = 'HORIZONTE';
-  ctrG.appendChild(brand2);
-
-  // accent line
-  const accent = document.createElementNS(NS, 'line');
-  accent.setAttribute('x1', CX - 12);
-  accent.setAttribute('y1', CY + 13);
-  accent.setAttribute('x2', CX + 12);
-  accent.setAttribute('y2', CY + 13);
-  accent.setAttribute('class', 'center-accent');
-  ctrG.appendChild(accent);
-
-  const tagline = document.createElementNS(NS, 'text');
-  tagline.setAttribute('x', CX);
-  tagline.setAttribute('y', CY + 23);
-  tagline.setAttribute('class', 'center-tag');
-  tagline.textContent = 'WERTEEBENEN';
-  ctrG.appendChild(tagline);
+  const cl1 = document.createElementNS(NS, 'text');
+  cl1.setAttribute('x', CX);
+  cl1.setAttribute('y', CY - 3);
+  cl1.setAttribute('class', 'center-label');
+  cl1.textContent = 'Werte-';
+  ctrG.appendChild(cl1);
+  const cl2 = document.createElementNS(NS, 'text');
+  cl2.setAttribute('x', CX);
+  cl2.setAttribute('y', CY + 9);
+  cl2.setAttribute('class', 'center-label');
+  cl2.textContent = 'ebenen';
+  ctrG.appendChild(cl2);
 }
 
 
