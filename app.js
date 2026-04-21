@@ -7,61 +7,101 @@
 /* ----- 1. Static data -------------------------------------------------- */
 
 const RINGS = [
-  { id: 'rot',    label: 'Rot',    ro: 114, ri: 30,  col: '#C0392B' },
-  { id: 'blau',   label: 'Blau',   ro: 170, ri: 114, col: '#2E6DA4' },
+  { id: 'rot', label: 'Rot', ro: 114, ri: 30, col: '#C0392B' },
+  { id: 'blau', label: 'Blau', ro: 170, ri: 114, col: '#2E6DA4' },
   { id: 'orange', label: 'Orange', ro: 228, ri: 170, col: '#D4861A' },
-  { id: 'gruen',  label: 'Grün',   ro: 288, ri: 228, col: '#4A8C5C' },
-  { id: 'gelb',   label: 'Gelb',   ro: 348, ri: 288, col: '#B8960C' },
+  { id: 'gruen', label: 'Grün', ro: 288, ri: 228, col: '#4A8C5C' },
+  { id: 'gelb', label: 'Gelb', ro: 348, ri: 288, col: '#B8960C' },
 ];
 
 const QS = {
   ii: { label: 'Innen / Ich', col: '#9A7A10', a1: 270, a2: 360 },
-  ai: { label: 'Außen / Ich', col: '#1A4A8A', a1: 0,   a2: 90  },
+  ai: { label: 'Außen / Ich', col: '#1A4A8A', a1: 0, a2: 90 },
   wi: { label: 'Innen / Wir', col: '#2A6A3A', a1: 180, a2: 270 },
-  wa: { label: 'Außen / Wir', col: '#8A4A1A', a1: 90,  a2: 180 },
+  wa: { label: 'Außen / Wir', col: '#8A4A1A', a1: 90, a2: 180 },
 };
 
 const FIELDS = [
-  { id: 'vertrauen',   label: 'Vertrauen',            q: 'ii', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'in freien Willen', gruen: 'in Gemeinschaft / gemeinsame Werte', orange: 'in Fähigkeiten im Wettbewerb', blau: 'in Regeln und bestehende Ordnung', rot: 'in Stärke des Anführers' } },
-  { id: 'angst',       label: 'Angst',                q: 'ii', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'vor Einschränkung', gruen: 'vor Ablehnung', orange: 'vor Versagen', blau: 'vor Positionsverlust', rot: 'vor Kontrollverlust / Schwäche' } },
-  { id: 'haltung',     label: 'Haltung im Kontakt',   q: 'ii', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'individuell / Trennung Person & Rolle', gruen: 'empathisch', orange: 'strategisch-nutzenorientiert', blau: 'vorsichtig / Rang ist wichtig', rot: 'dominant / direkt' } },
-  { id: 'motivation',  label: 'Intrins. Motivation',  q: 'ii', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Berufung & Selbstausdruck', gruen: 'Menschen inspirieren & würdigen', orange: 'unternehmerisches Denken & Handeln', blau: 'materiell / Sicherheit schaffen', rot: 'Stärke beweisen / sich durchsetzen' } },
-  { id: 'selbstwahr',  label: 'Selbstwahrnehmung',    q: 'ii', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Metaperspektive / kann sich beim Denken zuschauen', gruen: 'Gedanken & Gefühle bewusst', orange: 'Gedanken bewusst, Gefühle unbewusst', blau: 'Gedanken & Gefühle unbewusst', rot: 'Kaum Selbstreflexion / Impuls = Wahrheit' } },
-  { id: 'fuehrung',    label: 'Führungsverhalten',    q: 'ai', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Selbstmanagement / situative Beteiligung', gruen: 'begeistert & bindet alle ein', orange: 'motiviert durch Ziele & Rechenschaftspflicht', blau: 'strikte Anweisungen', rot: 'befiehlt / dominiert' } },
-  { id: 'entscheid',   label: 'Entscheidungsfindung', q: 'ai', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'systemisch / kontextsensitiv / situativ', gruen: 'wertebasiert / konsensorientiert', orange: 'Ziele & Strategie', blau: 'Führungskraft intransparent / regelgebunden', rot: 'Bauchentscheidung / Machtdemonstration' } },
-  { id: 'personal',    label: 'Personalentwicklung',  q: 'ai', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Networking / Coaching / Open Space', gruen: 'Coaching', orange: 'Training & Unterweisung', blau: 'Schulung', rot: 'Sink or swim' } },
-  { id: 'konflikt',    label: 'Umgang mit Konflikten',q: 'ai', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Konflikt als Potenzial', gruen: 'Lösung für Bedürfnisse aller', orange: 'um effektivste Lösung ringen', blau: 'Regelkonformität', rot: 'Eskalation / Einschüchterung' } },
-  { id: 'meetings',    label: 'Meetings',             q: 'ai', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Kontext- & kompetenzorientiert', gruen: 'auf Meinungsvielfalt & Bedürfnisse achten', orange: 'Ergebnisorientierung durch Moderation', blau: 'Ordnung halten / Protokoll', rot: 'Chef spricht, Rest hört zu' } },
-  { id: 'loyalitaet',  label: 'Loyalität',            q: 'wi', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'zum gemeinsamen Interesse & Ideen', gruen: 'zu gemeinsamen Werten', orange: 'zur gesamten Organisation', blau: 'gegenüber dem Chef', rot: 'zur Clique / zum Stärksten' } },
-  { id: 'atmosphaere', label: 'Arbeitsatmosphäre',    q: 'wi', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'offen & kreativ', gruen: 'freundschaftlich & gemeinschaftsorientiert', orange: 'pragmatisch & ergebnisgetrieben', blau: 'routiniertes Nebeneinander', rot: 'Revierkämpfe / Rangordnung' } },
-  { id: 'vision',      label: 'Vision / Werte',       q: 'wi', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'authentischer / situativer eigener Purpose', gruen: 'vermeintlich gemeinsamer Purpose / gesellschaftlich validiert', orange: 'Instrumente zur Entscheidungsfindung', blau: 'z.T. plakativ / Dogmen von oben', rot: 'Macht ist die Wahrheit' } },
-  { id: 'arbeitseinst',label: 'Arbeitseinstellung',   q: 'wi', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'interessenorientiert aus der Fülle / kein Mangel', gruen: 'Vision / idealistisch / Kultur vor Strategie', orange: 'Ziel / alles ist möglich', blau: 'Vorgabe / Skepsis / Gehorsam', rot: 'Durchsetzen oder verlieren' } },
-  { id: 'stakeholder', label: 'Stakeholder-Beziehung',q: 'wi', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'co-kreativ', gruen: 'partnerschaftlich', orange: 'zweckorientiert / strategisch', blau: 'hierarchisch', rot: 'ausnutzen solange möglich' } },
-  { id: 'produkte',    label: 'Produkte / DL',        q: 'wa', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'disruptive Innovation', gruen: 'sinnhafte / nachhaltige Produkte', orange: 'Trendprodukte / Innovation', blau: 'etablierte Produkte', rot: 'kopieren was funktioniert' } },
-  { id: 'entlohnung',  label: 'Entlohnungssystem',    q: 'wa', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'möglichkeitsorientiert', gruen: 'beteiligungsorientiert', orange: 'leistungsorientiert', blau: 'tarifgebunden / fix', rot: 'wer sich durchsetzt bekommt mehr' } },
-  { id: 'ressourcen',  label: 'Ressourcen-Effizienz', q: 'wa', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'flexible Systeme', gruen: 'nachhaltige Wertschöpfungskette', orange: 'Kosteneffizienz / Qualität', blau: 'Gesetze / Normen', rot: 'Ressourcen für Machterhalt' } },
-  { id: 'infofluss',   label: 'Infofluss / Komm.',    q: 'wa', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'freies Networking / kollegiale Beratung', gruen: 'Kommunikationsplattform / Transparenz', orange: 'Meeting / strategische Informationen', blau: 'Arbeitsgruppen', rot: 'Information als Machtmittel' } },
-  { id: 'organigramm', label: 'Organigramm',          q: 'wa', rings: ['rot','blau','orange','gruen','gelb'],
-    tips: { gelb: 'Selbstorganisation / agil', gruen: 'Matrix', orange: 'dynamische / flache Hierarchie', blau: 'feste Hierarchie', rot: 'wer oben ist entscheidet alles' } },
+  {
+    id: 'vertrauen', label: 'Vertrauen', q: 'ii', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'in freien Willen', gruen: 'in Gemeinschaft / gemeinsame Werte', orange: 'in Fähigkeiten im Wettbewerb', blau: 'in Regeln und bestehende Ordnung', rot: 'in Stärke des Anführers' }
+  },
+  {
+    id: 'angst', label: 'Angst', q: 'ii', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'vor Einschränkung', gruen: 'vor Ablehnung', orange: 'vor Versagen', blau: 'vor Positionsverlust', rot: 'vor Kontrollverlust / Schwäche' }
+  },
+  {
+    id: 'haltung', label: 'Haltung im Kontakt', q: 'ii', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'individuell / Trennung Person & Rolle', gruen: 'empathisch', orange: 'strategisch-nutzenorientiert', blau: 'vorsichtig / Rang ist wichtig', rot: 'dominant / direkt' }
+  },
+  {
+    id: 'motivation', label: 'Intrins. Motivation', q: 'ii', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Berufung & Selbstausdruck', gruen: 'Menschen inspirieren & würdigen', orange: 'unternehmerisches Denken & Handeln', blau: 'materiell / Sicherheit schaffen', rot: 'Stärke beweisen / sich durchsetzen' }
+  },
+  {
+    id: 'selbstwahr', label: 'Selbstwahrnehmung', q: 'ii', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Metaperspektive / kann sich beim Denken zuschauen', gruen: 'Gedanken & Gefühle bewusst', orange: 'Gedanken bewusst, Gefühle unbewusst', blau: 'Gedanken & Gefühle unbewusst', rot: 'Kaum Selbstreflexion / Impuls = Wahrheit' }
+  },
+  {
+    id: 'fuehrung', label: 'Führungsverhalten', q: 'ai', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Selbstmanagement / situative Beteiligung', gruen: 'begeistert & bindet alle ein', orange: 'motiviert durch Ziele & Rechenschaftspflicht', blau: 'strikte Anweisungen', rot: 'befiehlt / dominiert' }
+  },
+  {
+    id: 'entscheid', label: 'Entscheidungsfindung', q: 'ai', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'systemisch / kontextsensitiv / situativ', gruen: 'wertebasiert / konsensorientiert', orange: 'Ziele & Strategie', blau: 'Führungskraft intransparent / regelgebunden', rot: 'Bauchentscheidung / Machtdemonstration' }
+  },
+  {
+    id: 'personal', label: 'Personalentwicklung', q: 'ai', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Networking / Coaching / Open Space', gruen: 'Coaching', orange: 'Training & Unterweisung', blau: 'Schulung', rot: 'Sink or swim' }
+  },
+  {
+    id: 'konflikt', label: 'Umgang mit Konflikten', q: 'ai', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Konflikt als Potenzial', gruen: 'Lösung für Bedürfnisse aller', orange: 'um effektivste Lösung ringen', blau: 'Regelkonformität', rot: 'Eskalation / Einschüchterung' }
+  },
+  {
+    id: 'meetings', label: 'Meetings', q: 'ai', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Kontext- & kompetenzorientiert', gruen: 'auf Meinungsvielfalt & Bedürfnisse achten', orange: 'Ergebnisorientierung durch Moderation', blau: 'Ordnung halten / Protokoll', rot: 'Chef spricht, Rest hört zu' }
+  },
+  {
+    id: 'loyalitaet', label: 'Loyalität', q: 'wi', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'zum gemeinsamen Interesse & Ideen', gruen: 'zu gemeinsamen Werten', orange: 'zur gesamten Organisation', blau: 'gegenüber dem Chef', rot: 'zur Clique / zum Stärksten' }
+  },
+  {
+    id: 'atmosphaere', label: 'Arbeitsatmosphäre', q: 'wi', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'offen & kreativ', gruen: 'freundschaftlich & gemeinschaftsorientiert', orange: 'pragmatisch & ergebnisgetrieben', blau: 'routiniertes Nebeneinander', rot: 'Revierkämpfe / Rangordnung' }
+  },
+  {
+    id: 'vision', label: 'Vision / Werte', q: 'wi', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'authentischer / situativer eigener Purpose', gruen: 'vermeintlich gemeinsamer Purpose / gesellschaftlich validiert', orange: 'Instrumente zur Entscheidungsfindung', blau: 'z.T. plakativ / Dogmen von oben', rot: 'Macht ist die Wahrheit' }
+  },
+  {
+    id: 'arbeitseinst', label: 'Arbeitseinstellung', q: 'wi', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'interessenorientiert aus der Fülle / kein Mangel', gruen: 'Vision / idealistisch / Kultur vor Strategie', orange: 'Ziel / alles ist möglich', blau: 'Vorgabe / Skepsis / Gehorsam', rot: 'Durchsetzen oder verlieren' }
+  },
+  {
+    id: 'stakeholder', label: 'Stakeholder-Beziehung', q: 'wi', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'co-kreativ', gruen: 'partnerschaftlich', orange: 'zweckorientiert / strategisch', blau: 'hierarchisch', rot: 'ausnutzen solange möglich' }
+  },
+  {
+    id: 'produkte', label: 'Produkte / DL', q: 'wa', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'disruptive Innovation', gruen: 'sinnhafte / nachhaltige Produkte', orange: 'Trendprodukte / Innovation', blau: 'etablierte Produkte', rot: 'kopieren was funktioniert' }
+  },
+  {
+    id: 'entlohnung', label: 'Entlohnungssystem', q: 'wa', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'möglichkeitsorientiert', gruen: 'beteiligungsorientiert', orange: 'leistungsorientiert', blau: 'tarifgebunden / fix', rot: 'wer sich durchsetzt bekommt mehr' }
+  },
+  {
+    id: 'ressourcen', label: 'Ressourcen-Effizienz', q: 'wa', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'flexible Systeme', gruen: 'nachhaltige Wertschöpfungskette', orange: 'Kosteneffizienz / Qualität', blau: 'Gesetze / Normen', rot: 'Ressourcen für Machterhalt' }
+  },
+  {
+    id: 'infofluss', label: 'Infofluss / Komm.', q: 'wa', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'freies Networking / kollegiale Beratung', gruen: 'Kommunikationsplattform / Transparenz', orange: 'Meeting / strategische Informationen', blau: 'Arbeitsgruppen', rot: 'Information als Machtmittel' }
+  },
+  {
+    id: 'organigramm', label: 'Organigramm', q: 'wa', rings: ['rot', 'blau', 'orange', 'gruen', 'gelb'],
+    tips: { gelb: 'Selbstorganisation / agil', gruen: 'Matrix', orange: 'dynamische / flache Hierarchie', blau: 'feste Hierarchie', rot: 'wer oben ist entscheidet alles' }
+  },
 ];
 
 
@@ -116,12 +156,9 @@ function build() {
       sg.appendChild(p);
     });
 
-    // Outer label card (Vollständig ausgeschrieben & dynamische Breite)
-    const pos = pol(f._mid, 372);
-    const lbl = f.label; 
-    const W = Math.max(80, lbl.length * 6 + 12); // Dynamische Box-Breite
-    const H = 24;
-    
+    // Outer label card
+    const pos = pol(f._mid, 370);
+    const W = 74, H = 22;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'outer-label');
     g.setAttribute('data-field', f.id);
@@ -138,12 +175,13 @@ function build() {
     rect.setAttribute('stroke-width', '1');
     rect.setAttribute('stroke-opacity', '0.55');
 
+    const lbl = f.label.length > 13 ? f.label.substring(0, 12) + '…' : f.label;
     const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     txt.setAttribute('x', pos.x);
     txt.setAttribute('y', pos.y + 4);
     txt.setAttribute('text-anchor', 'middle');
     txt.setAttribute('font-family', "'Source Sans 3',sans-serif");
-    txt.setAttribute('font-size', '9');
+    txt.setAttribute('font-size', '7.5');
     txt.setAttribute('fill', '#333');
     txt.setAttribute('pointer-events', 'none');
     txt.textContent = lbl;
@@ -191,7 +229,7 @@ function mvTip(e) {
   let y = e.clientY - r.top - 8;
   if (x + 225 > r.width) x = e.clientX - r.left - 230;
   tipEl.style.left = x + 'px';
-  tipEl.style.top  = y + 'px';
+  tipEl.style.top = y + 'px';
 }
 
 function hideTip() { tipEl.classList.remove('show'); }
@@ -271,7 +309,7 @@ async function getQuestions() {
   if (!input) return;
   decisionText = input;
 
-  const btn  = document.getElementById('btn1');
+  const btn = document.getElementById('btn1');
   const load = document.getElementById('load1');
   btn.disabled = true;
   load.classList.add('active');
@@ -331,7 +369,7 @@ async function analyse() {
   const a2 = document.getElementById('ans2')?.value.trim() || '';
   const a3 = document.getElementById('ans3')?.value.trim() || '';
 
-  const btn  = document.getElementById('btn2');
+  const btn = document.getElementById('btn2');
   const load = document.getElementById('load2');
   btn.disabled = true;
   load.classList.add('active');
@@ -389,7 +427,7 @@ activated_fields: 4-12 Felder. primary_fields: 2-4 kritischste.`;
 
 function render(r) {
   const qL = { ii: 'Innen / Ich', ai: 'Außen / Ich', wi: 'Innen / Wir', wa: 'Außen / Wir' };
-  const qC = { ii: '#9A7A10',    ai: '#1A4A8A',    wi: '#2A6A3A',    wa: '#8A4A1A' };
+  const qC = { ii: '#9A7A10', ai: '#1A4A8A', wi: '#2A6A3A', wa: '#8A4A1A' };
   const lvC = { rot: '#C0392B', blau: '#2E6DA4', orange: '#D4861A', gruen: '#4A8C5C', gelb: '#B8960C' };
   const lvL = { rot: 'Rot – Macht', blau: 'Blau – Ordnung', orange: 'Orange – Leistung', gruen: 'Grün – Gemeinschaft', gelb: 'Gelb – Integral' };
 
@@ -457,91 +495,3 @@ function render(r) {
 /* ----- 10. Boot -------------------------------------------------------- */
 
 build();
-
-
-/* ----- 11. Miro-Board Feature (Pan & Zoom) ---------------------------- */
-
-const svgEl = document.getElementById('svg');
-let viewBox = { x: 0, y: 0, w: 800, h: 800 };
-let isDragging = false;
-let startPos = { x: 0, y: 0 };
-
-svgEl.style.cursor = 'grab';
-
-// Zoom per Mausrad / Trackpad
-svgEl.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
-  const newW = viewBox.w * zoomFactor;
-  const newH = viewBox.h * zoomFactor;
-
-  // Rechnet den Zoom so um, dass er dort passiert, wo die Maus ist
-  const rect = svgEl.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  const rx = mouseX / rect.width;
-  const ry = mouseY / rect.height;
-
-  viewBox.x += (viewBox.w - newW) * rx;
-  viewBox.y += (viewBox.h - newH) * ry;
-  viewBox.w = newW;
-  viewBox.h = newH;
-
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}, { passive: false });
-
-// Verschieben (Pan) per Drag & Drop
-svgEl.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  startPos = { x: e.clientX, y: e.clientY };
-  svgEl.style.cursor = 'grabbing';
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-  
-  // Berechne die Distanz der Mausbewegung relativ zur aktuellen Skalierung
-  const dx = (startPos.x - e.clientX) * (viewBox.w / svgEl.clientWidth);
-  const dy = (startPos.y - e.clientY) * (viewBox.h / svgEl.clientHeight);
-  
-  viewBox.x += dx;
-  viewBox.y += dy;
-  startPos = { x: e.clientX, y: e.clientY };
-  
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-});
-
-window.addEventListener('mouseup', () => {
-  isDragging = false;
-  svgEl.style.cursor = 'grab';
-});
-
-window.addEventListener('mouseleave', () => {
-  isDragging = false;
-  svgEl.style.cursor = 'grab';
-});
-
-// Mobile / Touch-Support zum Wischen (Pan)
-svgEl.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    isDragging = true;
-    startPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-}, { passive: true });
-
-window.addEventListener('touchmove', (e) => {
-  if (!isDragging || e.touches.length !== 1) return;
-  
-  const dx = (startPos.x - e.touches[0].clientX) * (viewBox.w / svgEl.clientWidth);
-  const dy = (startPos.y - e.touches[0].clientY) * (viewBox.h / svgEl.clientHeight);
-  
-  viewBox.x += dx;
-  viewBox.y += dy;
-  startPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}, { passive: true });
-
-window.addEventListener('touchend', () => {
-  isDragging = false;
-});
