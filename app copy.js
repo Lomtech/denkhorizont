@@ -116,12 +116,9 @@ function build() {
       sg.appendChild(p);
     });
 
-    // Outer label card (Vollständig ausgeschrieben & dynamische Breite)
-    const pos = pol(f._mid, 372);
-    const lbl = f.label; 
-    const W = Math.max(80, lbl.length * 6 + 12); // Dynamische Box-Breite
-    const H = 24;
-    
+    // Outer label card
+    const pos = pol(f._mid, 370);
+    const W = 74, H = 22;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'outer-label');
     g.setAttribute('data-field', f.id);
@@ -138,12 +135,13 @@ function build() {
     rect.setAttribute('stroke-width', '1');
     rect.setAttribute('stroke-opacity', '0.55');
 
+    const lbl = f.label.length > 13 ? f.label.substring(0, 12) + '…' : f.label;
     const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     txt.setAttribute('x', pos.x);
     txt.setAttribute('y', pos.y + 4);
     txt.setAttribute('text-anchor', 'middle');
     txt.setAttribute('font-family', "'Source Sans 3',sans-serif");
-    txt.setAttribute('font-size', '9');
+    txt.setAttribute('font-size', '7.5');
     txt.setAttribute('fill', '#333');
     txt.setAttribute('pointer-events', 'none');
     txt.textContent = lbl;
@@ -457,91 +455,3 @@ function render(r) {
 /* ----- 10. Boot -------------------------------------------------------- */
 
 build();
-
-
-/* ----- 11. Miro-Board Feature (Pan & Zoom) ---------------------------- */
-
-const svgEl = document.getElementById('svg');
-let viewBox = { x: 0, y: 0, w: 800, h: 800 };
-let isDragging = false;
-let startPos = { x: 0, y: 0 };
-
-svgEl.style.cursor = 'grab';
-
-// Zoom per Mausrad / Trackpad
-svgEl.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
-  const newW = viewBox.w * zoomFactor;
-  const newH = viewBox.h * zoomFactor;
-
-  // Rechnet den Zoom so um, dass er dort passiert, wo die Maus ist
-  const rect = svgEl.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  const rx = mouseX / rect.width;
-  const ry = mouseY / rect.height;
-
-  viewBox.x += (viewBox.w - newW) * rx;
-  viewBox.y += (viewBox.h - newH) * ry;
-  viewBox.w = newW;
-  viewBox.h = newH;
-
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}, { passive: false });
-
-// Verschieben (Pan) per Drag & Drop
-svgEl.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  startPos = { x: e.clientX, y: e.clientY };
-  svgEl.style.cursor = 'grabbing';
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-  
-  // Berechne die Distanz der Mausbewegung relativ zur aktuellen Skalierung
-  const dx = (startPos.x - e.clientX) * (viewBox.w / svgEl.clientWidth);
-  const dy = (startPos.y - e.clientY) * (viewBox.h / svgEl.clientHeight);
-  
-  viewBox.x += dx;
-  viewBox.y += dy;
-  startPos = { x: e.clientX, y: e.clientY };
-  
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-});
-
-window.addEventListener('mouseup', () => {
-  isDragging = false;
-  svgEl.style.cursor = 'grab';
-});
-
-window.addEventListener('mouseleave', () => {
-  isDragging = false;
-  svgEl.style.cursor = 'grab';
-});
-
-// Mobile / Touch-Support zum Wischen (Pan)
-svgEl.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    isDragging = true;
-    startPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-}, { passive: true });
-
-window.addEventListener('touchmove', (e) => {
-  if (!isDragging || e.touches.length !== 1) return;
-  
-  const dx = (startPos.x - e.touches[0].clientX) * (viewBox.w / svgEl.clientWidth);
-  const dy = (startPos.y - e.touches[0].clientY) * (viewBox.h / svgEl.clientHeight);
-  
-  viewBox.x += dx;
-  viewBox.y += dy;
-  startPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  
-  svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}, { passive: true });
-
-window.addEventListener('touchend', () => {
-  isDragging = false;
-});
