@@ -343,17 +343,17 @@ function pulseField(id){
  
 
 // ── API helper ──
-const API_KEY = "Your-Api-Key";
+const API_KEY = "ANTHROPIC_API_KEY";
  
 async function callAPI(system, userMsg){
-  const r=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":API_KEY},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,system,messages:[{role:"user",content:userMsg}]})
+  const r = await fetch("/.netlify/functions/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system, userMsg })
   });
-  const d=await r.json();
-  if(d.error)throw new Error(d.error.message);
-  return d.content?.[0]?.text||'';
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content?.[0]?.text || '';
 }
  
 function parseJSON(raw){
