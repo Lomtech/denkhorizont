@@ -1721,3 +1721,7 @@ textarea:focus,
   color: var(--accent);
   font-family: "Lora", serif;
 }
+.segment.dominant-ring {
+  filter: brightness(1.15) drop-shadow(0 0 3px currentColor);
+  stroke-width: 1.5px;
+}
